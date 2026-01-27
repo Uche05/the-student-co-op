@@ -14,5 +14,6 @@ Many students possess the academic credentials for their dream careers but remai
 ## 3. TECH STACK AND WHY
    I used Flask and Firebase. I wanted to use a python-based framework as that is whst i am used to but decided to use firebase since i knew i disd not want to do too much work coding back-end tasks. its a weird combo but one that enables me learn. note the drawbacks and what still makes my choice doable.
    
-## 4. When integrating **Flask and Firebase** for a hackathon, security often falls by the wayside in favor of speed. However, because dealing with **student psychometric data** (personal traits and weaknesses), basic security is actually a core part of the "awareness solution."
+## 4. SECURITY CONSIDERATIONS
+When integrating **Flask and Firebase** for a hackathon, security often falls by the wayside in favor of speed. However, because dealing with **student psychometric data** (personal traits and weaknesses), basic security is actually a core part of the "awareness solution."
 This was ensured by keeping needed files secret in the .gitignore, and using environmental variables. 
