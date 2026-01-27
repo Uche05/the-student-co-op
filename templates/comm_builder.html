@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+
+<div class="max-w-3xl mx-auto">
+    <div class="mb-8">
+        <h2 class="text-3xl font-bold text-navy">10x Communication Lab</h2>
+        <p class="text-gray-500">Practice professional scenarios with our AI Coach.</p>
+    </div>
+
+    <div id="chat-window" class="bg-white border border-gray-100 rounded-3xl p-6 h-96 overflow-y-auto shadow-inner mb-4 space-y-4">
+        <div class="bg-blue-50 p-4 rounded-2xl max-w-[80%]">
+            <p class="text-sm font-bold text-blue-800">Comm-Coach:</p>
+            <p class="text-navy">"Hi! I'm your coach. Today's scenario: You are late for a meeting with a senior partner. How do you explain yourself via email?"</p>
+        </div>
+    </div>
+
+    <div class="flex gap-2">
+        <input type="text" id="user-msg" placeholder="Type your response..." class="flex-1 p-4 bg-white border border-gray-200 rounded-2xl outline-none focus:border-electricBlue">
+        <button onclick="sendMessage()" class="bg-navy text-white px-8 rounded-2xl font-bold hover:bg-blue-900 transition">Send</button>
+    </div>
+</div>
+
+<script>
+async function sendMessage() {
+    const input = document.getElementById('user-msg');
+    const msg = input.value;
+    if(!msg) return;
+
+    // ... (UI update code) ...
+
+    const response = await fetch('/comm-builder', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json' // <--- THIS IS WHAT IS MISSING
+        },
+        body: JSON.stringify({ message: msg }) // Ensure this key matches your Python code
+    });
+    
+    const data = await response.json();
+    // ... (Display response) ...
+}
+</script>
+{% endblock %}

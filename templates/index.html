@@ -1,1 +1,24 @@
 {% extends "base.html" %}
+
+{% block content %}
+the page highlighting features of the Student Co-op platform.
+<div class="max-w-4xl mx-auto text-center py-20">
+    <h1 class="text-4xl font-bold text-navy mb-4">Welcome to Student Co-op</h1>
+    <p class="text-gray-600 mb-8">Empowering students to bridge the gap between education and career success.</p>
+    
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <h2 class="text-2xl font-semibold text-navy mb-2">Personalized Career Pathways</h2>
+            <p class="text-gray-500">Tailored guidance to help you achieve your dream career.</p>
+        </div>
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <h2 class="text-2xl font-semibold text-navy mb-2">Psychometric Testing</h2>
+            <p class="text-gray-500">Understand your strengths and areas for growth with our comprehensive assessments.</p>
+        </div>
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <h2 class="text-2xl font-semibold text-navy mb-2">Industry Benchmarks</h2>
+            <p class="text-gray-500">Compare your skills against industry standards to identify gaps and opportunities.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,13 +1,82 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="group cursor-pointer p-6 border-2 border-gray-100 rounded-xl hover:border-electricBlue hover:bg-blue-50 transition-all">
-    <label class="flex items-center gap-4 cursor-pointer">
-        <input type="radio" name="skill_1" class="w-5 h-5 accent-electricBlue">
-        <div>
-            <span class="block font-bold text-navy group-hover:text-electricBlue">Highly Confident</span>
-            <span class="text-sm text-gray-500">I enjoy leading discussions and public speaking.</span>
+<div class="max-w-2xl mx-auto mt-10">
+    <div class="w-full bg-gray-200 h-2 rounded-full mb-8">
+        <div id="progress" class="bg-electricBlue h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+    </div>
+
+    <div id="quiz-container" class="bg-white p-10 rounded-3xl shadow-xl border border-gray-100">
+        <span id="question-category" class="text-xs font-bold text-electricBlue uppercase tracking-widest">Category</span>
+        <h2 id="question-text" class="text-2xl font-bold text-navy mt-2 mb-8">Question text goes here?</h2>
+
+        <div class="space-y-4">
+            <button onclick="handleAnswer(5)" class="w-full text-left p-4 rounded-xl border-2 border-gray-100 hover:border-electricBlue hover:bg-blue-50 transition group">
+                <span class="font-bold text-navy group-hover:text-electricBlue">Strongly Agree</span>
+            </button>
+            <button onclick="handleAnswer(4)" class="w-full text-left p-4 rounded-xl border-2 border-gray-100 hover:border-electricBlue hover:bg-blue-50 transition group">
+                <span class="font-bold text-navy group-hover:text-electricBlue">Agree</span>
+            </button>
+            <button onclick="handleAnswer(3)" class="w-full text-left p-4 rounded-xl border-2 border-gray-100 hover:border-electricBlue hover:bg-blue-50 transition group">
+                <span class="font-bold text-navy group-hover:text-electricBlue">Neutral</span>
+            </button>
+            <button onclick="handleAnswer(2)" class="w-full text-left p-4 rounded-xl border-2 border-gray-100 hover:border-electricBlue hover:bg-blue-50 transition group">
+                <span class="font-bold text-navy group-hover:text-electricBlue">Disagree</span>
+            </button>
+            <button onclick="handleAnswer(1)" class="w-full text-left p-4 rounded-xl border-2 border-gray-100 hover:border-electricBlue hover:bg-blue-50 transition group">
+                <span class="font-bold text-navy group-hover:text-electricBlue">Strongly Disagree</span>
+            </button>
         </div>
-    </label>
+    </div>
 </div>
+
+<script>
+    const questions = [
+        { q: "I find it easy to explain complex ideas to others.", cat: "communication" },
+        { q: "I feel confident speaking in group discussions.", cat: "communication" },
+        { q: "I adapt my tone depending on who I am talking to.", cat: "communication" },
+        { q: "I can usually tell how others are feeling.", cat: "ei" },
+        { q: "I stay calm when others around me are stressed.", cat: "ei" },
+        { q: "I think before I react to a frustrating situation.", cat: "ei" },
+        { q: "I enjoy breaking down a big problem into small steps.", cat: "problem_solving" },
+        { q: "I look for multiple solutions before picking one.", cat: "problem_solving" },
+        { q: "I am comfortable making decisions with limited info.", cat: "problem_solving" },
+        { q: "I naturally take charge when a group lacks direction.", cat: "leadership" },
+        { q: "I enjoy motivating others to achieve a goal.", cat: "leadership" },
+        { q: "I am comfortable giving constructive feedback.", cat: "leadership" },
+        { q: "I bounce back quickly after a setback or failure.", cat: "resilience" },
+        { q: "I keep working toward my goals even when it's hard.", cat: "resilience" },
+        { q: "I view challenges as opportunities to learn.", cat: "resilience" }
+    ];
+
+    let currentStep = 0;
+    let answers = { communication: [], ei: [], problem_solving: [], leadership: [], resilience: [] };
+
+    function loadQuestion() {
+        const q = questions[currentStep];
+        document.getElementById('question-text').innerText = q.q;
+        document.getElementById('question-category').innerText = q.cat.replace('_', ' ');
+        document.getElementById('progress').style.width = `${(currentStep / questions.length) * 100}%`;
+    }
+
+    async function handleAnswer(value) {
+        const cat = questions[currentStep].cat;
+        answers[cat].push(value);
+
+        if (currentStep < questions.length - 1) {
+            currentStep++;
+            loadQuestion();
+        } else {
+            // Quiz Finished! Send to Flask
+            const response = await fetch('/submit-test', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(answers)
+            });
+            if (response.ok) window.location.href = "/dashboard";
+        }
+    }
+
+    loadQuestion();
+</script>
 {% endblock %}

@@ -1,21 +1,51 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="flex flex-col items-center justify-center min-h-screen bg-gray-50">
-    <div class="w-full max-w-md bg-white p-8 rounded-2xl shadow-md border border-gray-200">
-        <h2 class="text-2xl font-bold text-navy mb-6 text-center">Login to Your Account</h2>
-        <form action="/login" method="POST" class="space-y-6">
-            <div>
-                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-                <input type="email" id="email" name="email" required class="w-full px-4 py-2 border border-gray-300 rounded -md focus:outline-none focus:ring-2 focus:ring-electricBlue">
-            </div>
-            <div>
-                <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                <input type="password" id="password" name="password" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-electricBlue">
-            </div>
-            <button type="submit" class="w-full bg-electricBlue text-white py-2 rounded-md font-semibold hover:bg-blue-600 transition-colors">Login</button>
-        </form>
-        <p class="text-sm text-gray-600 mt-4 text-center">Don't have an account? <a href="/register" class="text-electricBlue font-medium hover:underline">Sign Up</a></p>
-    </div>
+<div class="max-w-md mx-auto bg-white p-10 rounded-3xl shadow-sm border border-gray-100">
+    <h2 class="text-3xl font-bold text-navy mb-2">Let's set your goal</h2>
+    <p class="text-gray-500 mb-8">This helps us calculate your career gap.</p>
+
+    <form id="onboardingForm" class="space-y-6">
+        <div>
+            <label class="block text-sm font-bold text-navy mb-2">What's your next step?</label>
+            <select id="nextStep" class="w-full p-4 bg-gray-50 border rounded-xl outline-none focus:border-electricBlue">
+                <option value="University">University</option>
+                <option value="Apprenticeship">Apprenticeship</option>
+                <option value="Gap Year">Gap Year</option>
+            </select>
+        </div>
+
+        <div>
+            <label class="block text-sm font-bold text-navy mb-2">Target Career Path</label>
+            <select id="career" class="w-full p-4 bg-gray-50 border rounded-xl outline-none focus:border-electricBlue">
+                <option value="Law">Law</option>
+                <option value="Software Engineering">Software Engineering</option>
+                <option value="Marketing">Marketing</option>
+                <option value="Finance">Finance</option>
+            </select>
+        </div>
+
+        <button type="button" onclick="saveOnboarding()" class="w-full bg-navy text-white py-4 rounded-xl font-bold hover:bg-blue-900 transition">Continue to Test</button>
+    </form>
 </div>
+
+<script>
+async function saveOnboarding() {
+    const data = {
+        nextStep: document.getElementById('nextStep').value,
+        career: document.getElementById('career').value
+    };
+
+    const response = await fetch('/submit-onboarding', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    });
+
+    if (response.ok) {
+        window.location.href = "/test"; // Move to the psychometric test
+    }
+}
+</script>
+
 {% endblock %}
