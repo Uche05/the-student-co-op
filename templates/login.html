@@ -6,11 +6,15 @@
     <p id="auth-subtitle" class="text-gray-500 mb-8 text-sm">Please enter your student credentials.</p>
     
     <div class="space-y-4">
+        <div id="name-container" class="hidden">
+            <input type="text" id="name-input" placeholder="Full Name" class="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-electricBlue transition">
+        </div>
+
         <input type="email" id="email" placeholder="Student Email" class="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-electricBlue transition">
         
         <input type="password" id="password" placeholder="Password" class="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-electricBlue transition">
         
-        <button type="button" id="main-btn" onclick="signInStudent()" class="btn w-full py-4 rounded-xl shadow-lg hover:bg-blue-700 transition duration-300">Sign In</button>
+        <button type="button" id="main-btn" onclick="handleAuth()" class="btn w-full py-4 rounded-xl shadow-lg hover:bg-blue-700 transition duration-300">Sign In</button>
         
         <div class="flex justify-between items-center text-xs font-medium px-1">
             <button type="button" onclick="toggleAuthMode()" id="toggle-link" class="text-electricBlue hover:underline">Need an account? Sign Up</button>
@@ -33,15 +37,18 @@
         const title = document.getElementById('auth-title');
         const btn = document.getElementById('main-btn');
         const link = document.getElementById('toggle-link');
+        const nameContainer = document.getElementById('name-container');
         
         if (isLoginMode) {
             title.innerText = "Welcome Back";
             btn.innerText = "Sign In";
             link.innerText = "Need an account? Sign Up";
+            nameContainer.classList.add('hidden'); // Hide name field
         } else {
             title.innerText = "Create Account";
             btn.innerText = "Register Now";
             link.innerText = "Already have an account? Log In";
+            nameContainer.classList.remove('hidden'); // Show name field
         }
     }
 
@@ -55,66 +62,62 @@
         measurementId: "G-SF9HKE1QW5"
     };
     
-    // Initialize Firebase only if not already initialized
     if (!firebase.apps.length) {
         firebase.initializeApp(firebaseConfig);
     }
 
-    async function signInStudent() {
+    // Renamed function to handle both modes
+    async function handleAuth() {
         const email = document.getElementById('email').value.trim();
         const password = document.getElementById('password').value;
+        const fullName = document.getElementById('name-input').value.trim();
         const errorDiv = document.getElementById('error-message');
         
-        // Clear previous errors
         errorDiv.innerText = "";
 
         try {
-            console.log("Attempting Firebase Auth...");
-            const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
-            const user = userCredential.user;
-            console.log("Firebase Auth Success. UID:", user.uid);
+            let userCredential;
+            
+            if (isLoginMode) {
+                // LOG IN LOGIC
+                userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
+            } else {
+                // SIGN UP LOGIC
+                if (!fullName) {
+                    errorDiv.innerText = "Please enter your full name.";
+                    return;
+                }
+                userCredential = await firebase.auth().createUserWithEmailAndPassword(email, password);
+            }
 
+            const user = userCredential.user;
             const idToken = await user.getIdToken();
 
-            console.log("Sending token to Flask...");
+            // Send to Flask
             const response = await fetch('/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token: idToken })
+                body : JSON.stringify({
+                    token: idToken,
+                    name: fullName || "Student" // Send the name gathered
+                }),
             });
 
             if (response.ok) {
-                console.log("Flask Session Set. Redirecting...");
-                window.location.href = "/dashboard";
+                // If they just registered, send them to career onboarding
+                // If they logged in, send them to dashboard
+                window.location.href = isLoginMode ? "/dashboard" : "/career";
             } else {
                 const errorData = await response.json();
-                errorDiv.innerText = "Flask Error: " + errorData.message;
+                errorDiv.innerText = errorData.message;
             }
         } catch (error) {
-            console.error("Full Error Object:", error);
-            // This handles the 'invalid-credential' error specifically
             errorDiv.innerText = error.message;
         }
     }
 
     async function resetPassword() {
-        const email = document.getElementById('email').value.trim();
-        const errorDiv = document.getElementById('error-message');
-        const successDiv = document.getElementById('success-message');
-        
-        if (!email) {
-            errorDiv.innerText = "Please enter your email address first.";
-            return;
-        }
-
-        try {
-            await firebase.auth().sendPasswordResetEmail(email);
-            successDiv.innerText = "Password reset email sent! Check your inbox.";
-            errorDiv.innerText = "";
-        } catch (error) {
-            errorDiv.innerText = error.message;
-        }
+        // ... (Keep your existing resetPassword logic here)
     }
-    
 </script>
 {% endblock %}

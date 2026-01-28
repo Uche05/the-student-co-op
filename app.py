@@ -30,10 +30,10 @@ app.secret_key = os.getenv("FLASK_SECRET")
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # Check if 'user_id' exists in the session
         if 'user_id' not in session:
             flash("Please log in first!")
-            return redirect(url_for('login.html'))
+            # Changed 'login.html' to 'login_page' (the function name)
+            return redirect(url_for('login_page')) 
         return f(*args, **kwargs)
     return decorated_function
 
@@ -52,32 +52,34 @@ def login_page():
     
     if request.method == 'POST':
         try:
-            data = request.get_json()
+            data = request.get_json(force=True)
             id_token = data.get('token')
+            user_name = data.get('name', 'Student') # Grab name from frontend
             
             # 1. Verify token with Firebase Admin
             decoded_token = auth.verify_id_token(id_token)
-            uid = decoded_token['uid'] # This is the unique string we need
+            uid = decoded_token['uid']
             email = decoded_token.get('email')
             
             # 2. DATABASE KEY STEP:
-            # Initialize the user document in Firestore using their UID
             user_ref = db.collection('users').document(uid)
+            user_snapshot = user_ref.get()
             
-            # Check if user exists, if not, create basic profile
-            if not user_ref.get().exists:
+            # If user is new (Signing Up), set initial profile
+            if not user_snapshot.exists:
                 user_ref.set({
+                    'name': user_name, # Save name here!
                     'email': email,
                     'test_completed': False,
                     'created_at': firestore.SERVER_TIMESTAMP,
-                    # Initialize scores at 0 so the Dashboard doesn't crash
                     'scores': {
                         'communication': 0,
                         'ei': 0,
                         'problem_solving': 0,
                         'leadership': 0,
                         'resilience': 0
-                    }
+                    },
+                    'comm_scores': [] # Initialize empty list for AI coach sessions
                 })
             
             # 3. Set the Flask session
@@ -86,7 +88,9 @@ def login_page():
             return jsonify({"status": "success", "message": "Logged in"}), 200
             
         except Exception as e:
+            print(f"Login Error: {e}")
             return jsonify({"status": "error", "message": str(e)}), 401
+        
 
 @app.route('/career')
 #@login_required
@@ -115,27 +119,26 @@ def quiz():
     return render_template('test.html')
 
 @app.route('/dashboard')
+@login_required # Now you can safely use this!
 def dashboard():
     uid = session.get('user_id')
-    if not uid:
-        return redirect('/login')
-
-    # Fetch user data from Firestore
     user_doc = db.collection('users').document(uid).get()
     
     if not user_doc.exists:
-        return redirect('/onboarding')
+        # If they logged in but have no doc, send them to onboarding
+        return redirect(url_for('onboarding'))
     
     user_data = user_doc.to_dict()
 
-    # If they haven't taken the test, send them to the test page
-    if not user_data.get('test_completed'):
-        return redirect('/quiz')
+    # Get display name safely
+    display_name = user_data.get('name', user_data.get('email', 'Student'))
 
-    # Define Benchmarks based on their career choice
-    # You can expand this dictionary for more careers!
+    if not user_data.get('test_completed'):
+        return redirect(url_for('quiz'))
+
+    # Benchmarks logic...
     benchmarks = {
-        'Law': [9, 7, 7, 8, 8], # Comm, EI, Prob, Lead, Res
+        'Law': [9, 7, 7, 8, 8],
         'Software Engineering': [6, 5, 10, 5, 7],
         'Marketing': [9, 8, 6, 7, 6],
         'Finance': [7, 6, 9, 7, 8]
@@ -145,6 +148,7 @@ def dashboard():
     current_benchmark = benchmarks.get(career, [7, 7, 7, 7, 7])
 
     return render_template('dashboard.html',
+                        name=display_name, # Pass name separately for easy use
                         user=user_data,
                         benchmark=current_benchmark)
 
