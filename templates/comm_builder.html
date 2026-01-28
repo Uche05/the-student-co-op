@@ -1,8 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<head>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-</head>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
 <div class="max-w-3xl mx-auto">
     <div class="mb-8">
@@ -10,37 +8,97 @@
         <p class="text-gray-500">Practice professional scenarios with our AI Coach.</p>
     </div>
 
-    <div id="chat-window" class="bg-white border border-gray-100 rounded-3xl p-6 h-96 overflow-y-auto shadow-inner mb-4 space-y-4">
-        <div class="bg-blue-50 p-4 rounded-2xl max-w-[80%]">
-            <p class="text-sm font-bold text-blue-800">Comm-Coach:</p>
+    <div id="chat-window" class="bg-white border border-gray-100 rounded-3xl p-6 h-96 overflow-y-auto shadow-inner mb-4 space-y-4 flex flex-col">
+        <div class="bg-blue-50 p-4 rounded-2xl max-w-[85%] self-start border border-blue-100">
+            <p class="text-xs font-bold text-blue-800 uppercase tracking-wider mb-1">Comm-Coach</p>
             <p class="text-navy">"Hi! I'm your coach. Today's scenario: You are late for a meeting with a senior partner. How do you explain yourself via email?"</p>
         </div>
     </div>
 
-    <div class="flex gap-2">
-        <input type="text" id="user-msg" placeholder="Type your response..." class="flex-1 p-4 bg-white border border-gray-200 rounded-2xl outline-none focus:border-electricBlue">
-        <button onclick="sendMessage()" class="bg-navy text-white px-8 rounded-2xl font-bold hover:bg-blue-900 transition">Send</button>
-    </div>
+    <form id="chat-form" class="flex gap-2">
+        <input type="text" id="user-msg" autocomplete="off" placeholder="Type your response..." 
+               class="flex-1 p-4 bg-white border border-gray-200 rounded-2xl outline-none focus:border-blue-500 transition-all">
+        <button type="submit" id="send-btn" 
+                class="bg-navy text-white px-8 rounded-2xl font-bold hover:bg-blue-900 transition flex items-center justify-center min-w-[120px]">
+            Send
+        </button>
+    </form>
 </div>
 
 <script>
-async function sendMessage() {
-    const input = document.getElementById('user-msg');
-    const msg = input.value;
-    if(!msg) return;
+const chatForm = document.getElementById('chat-form');
+const chatWindow = document.getElementById('chat-window');
+const input = document.getElementById('user-msg');
+const sendBtn = document.getElementById('send-btn');
 
-    // ... (UI update code) ...
-
-    const response = await fetch('/comm-builder', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json' // <--- THIS IS WHAT IS MISSING
-        },
-        body: JSON.stringify({ message: msg }) // Ensure this key matches your Python code
-    });
+// Function to handle sending messages
+chatForm.addEventListener('submit', async (e) => {
+    e.preventDefault(); // CRITICAL: Stops the page from refreshing
+    console.log("Form submitted"); // Debugging line
     
-    const data = await response.json();
-    // ... (Display response) ...
+    const msg = input.value.trim();
+    if (!msg) return;
+
+    // 1. Disable UI while waiting
+    input.value = "";
+    input.disabled = true;
+    sendBtn.disabled = true;
+    sendBtn.innerText = "Thinking...";
+
+    console.log("Sending message to backend:", msg); // Debugging line
+
+    // 2. Add User Message to UI
+    chatWindow.innerHTML += `
+        <div class="bg-gray-100 p-4 rounded-2xl max-w-[85%] self-end border border-gray-200">
+            <p class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">You</p>
+            <p class="text-navy">${msg}</p>
+        </div>`;
+    
+    scrollToBottom();
+
+    try {
+        // 3. Call the Python Backend
+        const response = await fetch('/comm-builder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: msg })
+        });
+        console.log("Server responded with status:", response.status); // Debugging line
+
+
+        if (!response.ok) throw new Error("Network response was not ok");
+        
+        const data = await response.json();
+
+        // 4. Add AI response (parsed with Marked for Markdown formatting)
+        chatWindow.innerHTML += `
+            <div class="bg-blue-50 p-4 rounded-2xl max-w-[85%] self-start border border-blue-100">
+                <p class="text-xs font-bold text-blue-800 uppercase tracking-wider mb-1">Comm-Coach</p>
+                <div class="text-navy prose prose-sm">${marked.parse(data.reply)}</div>
+            </div>`;
+
+    } catch (err) {
+        console.error("Error:", err);
+        chatWindow.innerHTML += `<p class="text-red-500 text-xs text-center">Failed to connect to coach. Please try again.</p>`;
+    } finally {
+        // 5. Re-enable UI
+        input.disabled = false;
+        sendBtn.disabled = false;
+        sendBtn.innerText = "Send";
+        input.focus();
+        scrollToBottom();
+    }
+});
+
+function scrollToBottom() {
+    chatWindow.scrollTop = chatWindow.scrollHeight;
 }
 </script>
+
+<style>
+    /* Ensures AI bullet points and bold text look good */
+    .prose p { margin-bottom: 0.5rem; }
+    .prose ul { list-style-type: disc; padding-left: 1.25rem; margin-bottom: 0.5rem; }
+    .prose strong { font-weight: 700; color: #1e3a8a; }
+</style>
 {% endblock %}
