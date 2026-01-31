@@ -1,14 +1,13 @@
 import os
+from functools import wraps
 
 import firebase_admin
 import google.genai as genai
 from dotenv import load_dotenv
 from firebase_admin import auth, credentials, firestore
-from flask import Flask, jsonify, render_template, request, session
-from functools import wraps
-from flask import flash, redirect, url_for
-from google import genai # Note: the import is different now!
-
+from flask import (Flask, flash, jsonify, redirect, render_template, request,
+                   session, url_for)
+from google import genai  # Note: the import is different now!
 
 # 1. Initialize Firebase using environment variables
 
@@ -255,3 +254,6 @@ def comm_builder():
     except Exception as e:
         print(f"Gemini Error: {e}")
         return jsonify({"reply": "Coach is stuck in a meeting. Try again!"}), 500
+    
+if __name__ == "__main__":
+    app.run()
