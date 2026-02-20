@@ -63,6 +63,20 @@ export const api = {
   jobs: {
     list: () => fetchApi('/jobs'),
     get: (id: string) => fetchApi(`/jobs/${id}`),
+    // Job applications (diary)
+    apply: (data: { jobId: string; jobTitle: string; company: string; notes?: string; userId: string }) =>
+      fetchApi('/jobs/apply', { method: 'POST', body: JSON.stringify(data) }),
+    getApplications: (userId: string) =>
+      fetchApi(`/jobs/applications/${userId}`),
+    updateApplication: (applicationId: string, data: { status?: string; notes?: string; followUpDate?: string }) =>
+      fetchApi(`/jobs/applications/${applicationId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    // Bookmarks
+    bookmark: (data: { job: unknown; userId: string; notes?: string }) =>
+      fetchApi('/jobs/bookmark', { method: 'POST', body: JSON.stringify(data) }),
+    removeBookmark: (jobId: string, userId: string) =>
+      fetchApi(`/jobs/bookmark/${jobId}?userId=${userId}`, { method: 'DELETE' }),
+    getBookmarks: (userId: string) =>
+      fetchApi(`/jobs/bookmarks/${userId}`),
   },
 
   // Fellows endpoints
@@ -92,6 +106,23 @@ export const api = {
       fetchApi('/chat/analyze', { method: 'POST', body: JSON.stringify({ text: message, context }) }),
     analyze: (data: { text?: string; audioUrl?: string }) =>
       fetchApi('/chat/analyze', { method: 'POST', body: JSON.stringify(data) }),
+  },
+
+  // Onboarding
+  onboarding: {
+    save: (data: {
+      userId: string;
+      careerGoals: string;
+      targetIndustry: string;
+      targetRoles: string[];
+      experienceLevel: string;
+      skills: string[];
+      locationPreference: string;
+      workType: string;
+      readyToApply: boolean;
+      lookingFor: string[];
+    }) => fetchApi('/onboarding', { method: 'POST', body: JSON.stringify(data) }),
+    get: (userId: string) => fetchApi(`/onboarding/${userId}`),
   },
 
   // Settings endpoints

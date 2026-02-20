@@ -1,7 +1,4 @@
-<<<<<<< HEAD
 # The Student Co-Op
-
-An AI-powered career development platform that helps students transform from "employment-blind" to career-ready through awareness-driven personality assessment and targeted skill building.
 
 ---
 
@@ -10,13 +7,14 @@ An AI-powered career development platform that helps students transform from "em
 1. [About](#about)
 2. [Problem & Solution](#problem--solution)
 3. [Tech Stack](#tech-stack)
-4. [Features](#features)
-5. [API Integrations](#api-integrations)
-6. [Project Structure](#project-structure)
-7. [Getting Started](#getting-started)
-8. [Deployment to Akamai](#deployment-to-akamai)
-9. [Security](#security)
-10. [Acknowledgments](#acknowledgments)
+4. [Tools Evaluation](#tools-evaluation)
+5. [Features](#features)
+6. [API Integrations](#api-integrations)
+7. [Project Structure](#project-structure)
+8. [Getting Started](#getting-started)
+9. [Deployment to Akamai](#deployment-to-akamai)
+10. [Security](#security)
+11. [Acknowledgments](#acknowledgments)
 
 ---
 
@@ -67,16 +65,100 @@ Many students possess the academic credentials for their dream careers but remai
 | **Axios** | HTTP client |
 | **Cheerio** | HTML parsing (job scraping) |
 | **@sanity/client** | CMS database |
+| **cors** | Cross-origin resource sharing |
+| **dotenv** | Environment variables |
 
 ### External Services
 | Service | Purpose |
 |---------|---------|
 | **Sanity CMS** | Database for users, profiles, jobs |
-| **You.com API** | AI-powered interview coaching |
-| **Deepgram** | Sentiment analysis |
-| **Foxit PDF** | CV PDF generation |
-| **Jooble API** | Job search aggregation |
-| **RapidAPI** | Additional job data |
+
+---
+
+## Tools Evaluation
+
+### Planned vs Actual Tools Comparison
+
+#### Frontend Tools
+| Planned Tool | Actually Used | Status |
+|--------------|---------------|--------|
+| React | React | ✅ Used |
+| Vite | Vite | ✅ Used |
+| TypeScript | TypeScript | ✅ Used |
+| Tailwind CSS | Tailwind CSS | ✅ Used |
+| shadcn/ui (Radix UI) | shadcn/ui | ✅ Used |
+| Recharts | Recharts | ✅ Used |
+| React Router | React Router | ✅ Used |
+| Lucide React | Lucide React | ✅ Used |
+| React Hook Form | React Hook Form | ✅ Used |
+| - | React DnD | ✅ Added (drag-and-drop for CV builder) |
+| - | next-themes | ✅ Added (dark mode support) |
+| - | sonner | ✅ Added (toast notifications) |
+| - | vaul | ✅ Added (drawer components) |
+
+#### Backend Tools
+| Planned Tool | Actually Used | Status |
+|--------------|---------------|--------|
+| Node.js | Node.js | ✅ Used |
+| Express | Express | ✅ Used |
+| TypeScript | TypeScript | ✅ Used |
+| tsx | tsx | ✅ Used |
+| Axios | Axios | ✅ Used |
+| Cheerio | Cheerio | ✅ Used |
+| @sanity/client | @sanity/client | ✅ Used |
+| - | cors | ✅ Added |
+| - | dotenv | ✅ Added |
+
+#### External Services (API Integrations)
+| Planned Service | Actually Used | Status |
+|-----------------|---------------|--------|
+| Sanity CMS | Sanity CMS | ✅ Used |
+| You.com API | - | ❌ Not Used |
+| Deepgram | - | ❌ Not Used |
+| Foxit PDF | - | ❌ Not Used |
+| Jooble API | - | ❌ Not Used |
+| RapidAPI | - | ❌ Not Used |
+
+---
+
+### Evaluation & Justification
+
+#### What Worked Well
+
+1. **React + Vite + TypeScript**: This combination proved to be highly productive. Vite's fast HMR (Hot Module Replacement) significantly reduced development time, and TypeScript's type safety caught many potential bugs early in development.
+
+2. **Tailwind CSS + shadcn/ui**: Using Tailwind with shadcn/ui components was an excellent choice. It provided pre-built, accessible components while allowing full customization through Tailwind's utility classes. This approach balanced development speed with design flexibility.
+
+3. **Recharts**: The radar chart visualization was crucial for the "Mirror Effect" feature. Recharts offered a good balance of customization and ease of use for displaying psychometric data.
+
+4. **Sanity CMS**: Using Sanity as a headless CMS was ideal for this project. It provided a flexible schema for user profiles, psychometric data, and job listings without requiring a complex database setup.
+
+5. **Express + Cheerio**: This combination was perfect for the web scraping requirements (job aggregation). Cheerio's lightweight DOM manipulation made it easy to parse job listings from various sources.
+
+
+#### Time Constraints Impact
+
+The primary factor influencing our tool choices was participant time constraints. Here's how time constraints shaped our decisions:
+
+1. **Prioritized Core Features**: Instead of spreading effort across multiple external APIs, we focused on building a solid foundation with the psychometric testing and radar chart visualization - the core differentiators of our platform.
+
+2. **Avoided Complex Integrations**: Services like You.com and Deepgram would have required significant setup time for API keys, testing, and error handling. We opted to build the UI/UX framework that could integrate these services later.
+
+3. **Leveraged Existing Components**: Using shadcn/ui saved approximately 40-60% of UI development time compared to building components from scratch. This allowed us to focus on the unique features.
+
+4. **Simplified PDF Generation**: Client-side PDF generation was much faster to implement than setting up a server-side Foxit integration, while still delivering the core functionality users needed.
+
+5. **Custom Scraper Over APIs**: While Cheerio-based scraping requires maintenance if target sites change their HTML, it was faster to implement and didn't require external API subscriptions for a demo.
+
+#### Lessons Learned & Recommendations
+
+1. **For Future Development**: The architecture is now ready for AI integration. Adding You.com API for interview coaching would be the highest-impact enhancement.
+
+2. **If Budget Permits**: Deepgram would significantly enhance the interview practice experience with real-time transcription and sentiment analysis.
+
+3. **Scalability Consideration**: For production, we would migrate from Cheerio scraping to official job APIs (Jooble/RapidAPI) to ensure reliability and compliance with terms of service.
+
+4. **PDF Generation**: Consider migrating to a server-side solution like Puppeteer or Playwright for more controlled PDF generation with consistent formatting.
 
 ---
 
@@ -263,7 +345,6 @@ Kilo Code assisted with:
 - [Tailwind CSS](https://tailwindcss.com/) - Styling
 - [shadcn/ui](https://ui.shadcn.com/) - UI Components
 - [Sanity](https://www.sanity.io/) - Headless CMS
-- [You.com](https://you.com/) - AI API
 - [Express](https://expressjs.com/) - Backend Framework
 
 ### License
@@ -273,9 +354,7 @@ MIT License - See LICENSE file for details
 ---
 
 *Built with ❤️ for students, by students*
-=======
-
-## Why This Exists
+*Built with ❤️ for students, by students*
 Universities teach students to pass exams, but workplaces demand more than knowledge, they demand behavioural readiness. Many graduates struggle with communication, confidence, leadership, or collaboration because career platforms focus on credentials, not fit. These gaps aren’t about intelligence; they’re about alignment, often invisible until real-world experience exposes them, a problem known as employment-blindness.
 
 ## What Student Co-op Does Differently
@@ -289,4 +368,4 @@ Students complete an awareness-based assessment that measures behavioural traits
 Each career path has associated behavioural benchmarks. The student’s profile is compared against these benchmarks and visualised through a Radar Map. This visual comparison highlights strengths, growth gaps, and potential risk areas, creating a “mirror effect” where students see themselves in context.
 ### - Targeted Gap Identification
 When misalignment is detected, the system flags high-impact weaknesses, identifies behavioural bottlenecks, and suggests small, actionable development challenges. The goal is not to discourage ambition but to make growth measurable and focused
->>>>>>> a3ee66227cc8c26e4116ae514d984df4ec63771f
+

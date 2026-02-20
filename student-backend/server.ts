@@ -328,34 +328,638 @@ app.get('/api/jobs/sources', (_req: Request, res: Response) => {
 });
 
 /**
- * POST /api/cv/generate
+ * POST /api/jobs/apply
  * 
- * Generate CV PDF using Foxit SDK
- * (Stub implementation - to be implemented with Foxit integration)
+ * Record a job application (diary feature)
+ */
+app.post('/api/jobs/apply', async (req: Request, res: Response) => {
+  try {
+    const { jobId, jobTitle, company, notes, userId } = req.body;
+    
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    if (!sanityClient) {
+      // Return mock success if Sanity not configured
+      return res.json({ 
+        success: true, 
+        message: 'Application tracked (demo mode)',
+        application: {
+          id: `app-${Date.now()}`,
+          jobId,
+          jobTitle,
+          company,
+          appliedAt: new Date().toISOString(),
+          status: 'applied',
+          notes: notes || '',
+        }
+      });
+    }
+
+    // Create application record in Sanity
+    const application = await sanityClient.create({
+      _type: 'jobApplication',
+      userId,
+      jobId,
+      jobTitle,
+      company,
+      appliedAt: new Date().toISOString(),
+      status: 'applied',
+      notes: notes || '',
+    });
+
+    console.log(`[Sanity] Job application recorded: ${jobTitle} at ${company}`);
+
+    res.json({ 
+      success: true, 
+      application: {
+        id: application._id,
+        jobId,
+        jobTitle,
+        company,
+        appliedAt: application.appliedAt,
+        status: 'applied',
+        notes,
+      }
+    });
+  } catch (error) {
+    console.error('[API] Job application error:', error);
+    res.status(500).json({ success: false, error: 'Failed to record application' });
+  }
+});
+
+/**
+ * GET /api/jobs/applications/:userId
+ * 
+ * Get user's job applications (diary)
+ */
+app.get('/api/jobs/applications/:userId', async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+
+    if (!sanityClient) {
+      return res.json({ success: true, applications: [] });
+    }
+
+    const applications = await sanityClient.fetch(
+      `*[_type == "jobApplication" && userId == $userId] | order(appliedAt desc) {
+        _id,
+        jobId,
+        jobTitle,
+        company,
+        appliedAt,
+        status,
+        notes,
+        followUpDate
+      }`,
+      { userId }
+    );
+
+    res.json({ success: true, applications });
+  } catch (error) {
+    console.error('[API] Get applications error:', error);
+    res.status(500).json({ success: false, error: 'Failed to get applications' });
+  }
+});
+
+/**
+ * PATCH /api/jobs/applications/:applicationId
+ * 
+ * Update application status
+ */
+app.patch('/api/jobs/applications/:applicationId', async (req: Request, res: Response) => {
+  try {
+    const { applicationId } = req.params;
+    const { status, notes, followUpDate } = req.body;
+
+    if (!sanityClient) {
+      return res.json({ success: true, message: 'Demo mode - status not updated' });
+    }
+
+    await sanityClient.patch(applicationId as string).set({
+      status,
+      notes,
+      followUpDate,
+    }).commit();
+
+    res.json({ success: true, message: 'Application status updated' });
+  } catch (error) {
+    console.error('[API] Update application error:', error);
+    res.status(500).json({ success: false, error: 'Failed to update application' });
+  }
+});
+
+/**
+ * POST /api/jobs/bookmark
+ * 
+ * Bookmark a job (save for later)
+ */
+app.post('/api/jobs/bookmark', async (req: Request, res: Response) => {
+  try {
+    const { job, userId, notes } = req.body;
+    
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    if (!sanityClient) {
+      // Demo mode
+      return res.json({ 
+        success: true, 
+        bookmark: {
+          id: `bookmark-${Date.now()}`,
+          jobId: job.id,
+          job,
+          bookmarkedAt: new Date().toISOString(),
+          notes: notes || '',
+        }
+      });
+    }
+
+    // Check if already bookmarked
+    const existing = await sanityClient.fetch(
+      `*[_type == "bookmarkedJob" && userId == $userId && jobId == $jobId][0]`,
+      { userId, jobId: job.id }
+    );
+
+    if (existing) {
+      return res.json({ success: true, message: 'Job already bookmarked', bookmark: existing });
+    }
+
+    // Create bookmark
+    const bookmark = await sanityClient.create({
+      _type: 'bookmarkedJob',
+      userId,
+      jobId: job.id,
+      job,
+      bookmarkedAt: new Date().toISOString(),
+      notes: notes || '',
+    });
+
+    console.log(`[Sanity] Job bookmarked: ${job.position} at ${job.company}`);
+
+    res.json({ 
+      success: true, 
+      bookmark: {
+        id: bookmark._id,
+        jobId: job.id,
+        job,
+        bookmarkedAt: bookmark.bookmarkedAt,
+        notes,
+      }
+    });
+  } catch (error) {
+    console.error('[API] Bookmark error:', error);
+    res.status(500).json({ success: false, error: 'Failed to bookmark job' });
+  }
+});
+
+/**
+ * DELETE /api/jobs/bookmark/:jobId
+ * 
+ * Remove bookmark
+ */
+app.delete('/api/jobs/bookmark/:jobId', async (req: Request, res: Response) => {
+  try {
+    const { jobId } = req.params;
+    const { userId } = req.query;
+
+    if (!sanityClient) {
+      return res.json({ success: true, message: 'Demo mode' });
+    }
+
+    const bookmark = await sanityClient.fetch(
+      `*[_type == "bookmarkedJob" && userId == $userId && jobId == $jobId][0]`,
+      { userId, jobId }
+    );
+
+    if (bookmark) {
+      await sanityClient.delete(bookmark._id);
+    }
+
+    res.json({ success: true, message: 'Bookmark removed' });
+  } catch (error) {
+    console.error('[API] Remove bookmark error:', error);
+    res.status(500).json({ success: false, error: 'Failed to remove bookmark' });
+  }
+});
+
+/**
+ * GET /api/jobs/bookmarks/:userId
+ * 
+ * Get user's bookmarks
+ */
+app.get('/api/jobs/bookmarks/:userId', async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+
+    if (!sanityClient) {
+      return res.json({ success: true, bookmarks: [] });
+    }
+
+    const bookmarks = await sanityClient.fetch(
+      `*[_type == "bookmarkedJob" && userId == $userId] | order(bookmarkedAt desc) {
+        _id,
+        jobId,
+        job,
+        bookmarkedAt,
+        notes
+      }`,
+      { userId }
+    );
+
+    res.json({ success: true, bookmarks });
+  } catch (error) {
+    console.error('[API] Get bookmarks error:', error);
+    res.status(500).json({ success: false, error: 'Failed to get bookmarks' });
+  }
+});
+
+/**
+ * POST /api/onboarding
+ * 
+ * Save user's onboarding data
+ */
+app.post('/api/onboarding', async (req: Request, res: Response) => {
+  try {
+    const { userId, careerGoals, targetIndustry, targetRoles, experienceLevel, skills, locationPreference, workType, readyToApply, lookingFor } = req.body;
+    
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    console.log('[API] Saving onboarding data for user:', userId);
+
+    if (!sanityClient) {
+      // Demo mode
+      return res.json({ 
+        success: true, 
+        message: 'Onboarding data saved (demo mode)',
+        onboarding: {
+          careerGoals,
+          targetIndustry,
+          targetRoles,
+          experienceLevel,
+          skills,
+          locationPreference,
+          workType,
+          readyToApply,
+          lookingFor,
+        }
+      });
+    }
+
+    // Check if onboarding exists
+    const existing = await sanityClient.fetch(
+      `*[_type == "onboarding" && userId == $userId][0]`,
+      { userId }
+    );
+
+    let onboarding;
+    if (existing) {
+      // Update existing
+      onboarding = await sanityClient.patch(existing._id).set({
+        careerGoals,
+        targetIndustry,
+        targetRoles,
+        experienceLevel,
+        skills,
+        locationPreference,
+        workType,
+        readyToApply,
+        lookingFor,
+        updatedAt: new Date().toISOString(),
+      }).commit();
+    } else {
+      // Create new
+      onboarding = await sanityClient.create({
+        _type: 'onboarding',
+        userId,
+        careerGoals,
+        targetIndustry,
+        targetRoles,
+        experienceLevel,
+        skills,
+        locationPreference,
+        workType,
+        readyToApply,
+        lookingFor,
+        completedAt: new Date().toISOString(),
+      });
+    }
+
+    // Also update user's onboardingCompleted flag
+    const user = await sanityClient.fetch(
+      `*[_type == "user" && userId == $userId][0]`,
+      { userId }
+    );
+    
+    if (user) {
+      await sanityClient.patch(user._id).set({
+        onboardingCompleted: true,
+        careerPath: targetIndustry,
+        targetCompanies: targetRoles,
+        strengths: skills,
+      }).commit();
+    }
+
+    console.log(`[Sanity] Onboarding completed for user: ${userId}`);
+
+    res.json({ 
+      success: true, 
+      message: 'Onboarding data saved',
+      onboarding: {
+        careerGoals,
+        targetIndustry,
+        targetRoles,
+        experienceLevel,
+        skills,
+        locationPreference,
+        workType,
+        readyToApply,
+        lookingFor,
+      }
+    });
+  } catch (error) {
+    console.error('[API] Onboarding save error:', error);
+    res.status(500).json({ success: false, error: 'Failed to save onboarding data' });
+  }
+});
+
+/**
+ * GET /api/onboarding/:userId
+ * 
+ * Get user's onboarding data
+ */
+app.get('/api/onboarding/:userId', async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+
+    if (!sanityClient) {
+      return res.json({ success: true, onboarding: null, completed: false });
+    }
+
+    const onboarding = await sanityClient.fetch(
+      `*[_type == "onboarding" && userId == $userId][0]`,
+      { userId }
+    );
+
+    res.json({ 
+      success: true, 
+      onboarding,
+      completed: !!onboarding
+    });
+  } catch (error) {
+    console.error('[API] Get onboarding error:', error);
+    res.status(500).json({ success: false, error: 'Failed to get onboarding data' });
+  }
+});
+
+/**
+ * POST /api/cv/generate
+ *
+ * Generate CV PDF using Foxit Document Generation API
+ * Creates a template-based CV that can be reused
  */
 app.post('/api/cv/generate', async (req: Request, res: Response) => {
   try {
     const cvData = req.body;
-    console.log('[API] POST /api/cv/generate - Generating CV...');
+    const userId = req.body.userId || 'default';
+    console.log('[API] POST /api/cv/generate - Generating CV for user:', userId);
 
-    // TODO: Implement Foxit PDF generation
-    // 1. Save CV data to Sanity
-    // 2. Send to Foxit PDF SDK
-    // 3. Return PDF buffer
+    // Check for Foxit API keys
+    const foxitDocGenClientId = process.env.FOXIT_DOC_GEN_CLIENT_ID;
+    const foxitDocGenClientSecret = process.env.FOXIT_DOC_GEN_CLIENT_SECRET;
 
-    res.json({
-      success: true,
-      message: 'CV generation endpoint ready - Foxit integration pending',
-      data: cvData,
-    });
+    // Prepare CV data for the template (used in both paths)
+    const cvTemplateData = {
+      name: cvData.personalInfo?.name || 'Your Name',
+      title: cvData.personalInfo?.title || 'Professional Title',
+      email: cvData.personalInfo?.email || 'email@example.com',
+      phone: cvData.personalInfo?.phone || '',
+      location: cvData.personalInfo?.location || '',
+      linkedin: cvData.personalInfo?.linkedin || '',
+      summary: cvData.personalInfo?.summary || 'Professional summary...',
+      experience: (cvData.experience || []).map((exp: any) => ({
+        company: exp.company || '',
+        position: exp.position || '',
+        startDate: exp.startDate || '',
+        endDate: exp.endDate || 'Present',
+        description: exp.description || '',
+      })),
+      education: (cvData.education || []).map((edu: any) => ({
+        school: edu.school || '',
+        degree: edu.degree || '',
+        year: edu.year || '',
+      })),
+      skills: (cvData.skills || []).join(', '),
+      generatedDate: new Date().toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      }),
+    };
+
+    // Generate HTML template (works with or without Foxit)
+    const htmlTemplate = generateCVHTMLTemplate(cvTemplateData);
+
+    if (!foxitDocGenClientId || foxitDocGenClientId === 'your_foxit_client_id') {
+      // Fallback: Return HTML template that can be printed to PDF
+      console.log('[API] Using fallback CV generation (no Foxit key)');
+      res.setHeader('Content-Type', 'text/html');
+      res.setHeader('Content-Disposition', `attachment; filename="CV-${userId}.html"`);
+      return res.send(htmlTemplate);
+    }
+
+    // Try Foxit PDF Service API - fall back to HTML if it fails
+    try {
+      // Get access token from Foxit PDF Service
+      const foxitPdfClientId = process.env.FOXIT_PDF_SERVICE_CLIENT_ID;
+      const foxitPdfClientSecret = process.env.FOXIT_PDF_SERVICE_CLIENT_SECRET;
+      const foxitBaseUrl = process.env.FOXIT_BASE_URL || 'https://na1.fusion.foxit.com';
+
+      const tokenResponse = await axios.post(
+        `${foxitBaseUrl}/api/v1/oauth/token`,
+        new URLSearchParams({
+          grant_type: 'client_credentials',
+          client_id: foxitPdfClientId || foxitDocGenClientId,
+          client_secret: foxitPdfClientSecret || foxitDocGenClientSecret || '',
+        } as any),
+        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+      );
+
+      const accessToken = tokenResponse.data.access_token;
+      console.log('[Foxit] Got access token');
+
+      // Convert HTML to PDF using Foxit PDF Service
+      const pdfResponse = await axios.post(
+        `${foxitBaseUrl}/api/v1/conversion/html-to-pdf`,
+        {
+          html: htmlTemplate,
+          options: {
+            pageSize: 'A4',
+            marginTop: '10mm',
+            marginBottom: '10mm',
+            marginLeft: '10mm',
+            marginRight: '10mm',
+          }
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          responseType: 'arraybuffer',
+        }
+      );
+
+      console.log('[Foxit] PDF generated successfully');
+
+      // Save CV template to Sanity for reuse
+      if (sanityClient && userId !== 'default') {
+        try {
+          await sanityClient.createOrReplace({
+            _type: 'cvTemplate',
+            _id: `cv-template-${userId}`,
+            userId,
+            templateData: cvData,
+            lastGenerated: new Date().toISOString(),
+          });
+          console.log('[Sanity] Saved CV template for user:', userId);
+        } catch (sanityError) {
+          console.error('[Sanity] Error saving CV template:', sanityError);
+        }
+      }
+
+      // Return PDF
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="CV-${cvData.personalInfo?.name || 'Student'}.pdf"`);
+      return res.send(Buffer.from(pdfResponse.data));
+
+    } catch (foxitError) {
+      console.error('[Foxit] API failed, falling back to HTML:', foxitError instanceof Error ? foxitError.message : 'Unknown error');
+      // Fallback to HTML
+      res.setHeader('Content-Type', 'text/html');
+      res.setHeader('Content-Disposition', `attachment; filename="CV-${userId}.html"`);
+      return res.send(htmlTemplate);
+    }
+
   } catch (error) {
     console.error('[API] CV generation error:', error instanceof Error ? error.message : 'Unknown error');
     res.status(500).json({
       success: false,
-      error: 'Failed to generate CV',
+      error: 'Failed to generate CV: ' + (error instanceof Error ? error.message : 'Unknown error'),
     });
   }
 });
+
+// HTML Template Generator for CV
+function generateCVHTMLTemplate(data: any): string {
+  const { name, title, email, phone, location, linkedin, summary, experience, education, skills, generatedDate } = data;
+  
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 800px; margin: 0 auto; padding: 40px; }
+    .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #3182CE; padding-bottom: 20px; }
+    .name { font-size: 32px; font-weight: bold; color: #1A202C; margin-bottom: 5px; }
+    .title { font-size: 18px; color: #3182CE; margin-bottom: 15px; }
+    .contact { font-size: 12px; color: #64748B; }
+    .contact span { margin: 0 8px; }
+    .section { margin-bottom: 25px; }
+    .section-title { font-size: 16px; font-weight: bold; color: #1A202C; border-bottom: 1px solid #E2E8F0; padding-bottom: 8px; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; }
+    .summary { font-size: 13px; color: #4A5568; text-align: justify; }
+    .experience-item, .education-item { margin-bottom: 20px; }
+    .exp-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+    .company { font-weight: bold; color: #1A202C; }
+    .position { color: #3182CE; font-size: 14px; }
+    .dates { font-size: 12px; color: #64748B; }
+    .description { font-size: 12px; color: #4A5568; margin-top: 5px; }
+    .skills { font-size: 13px; }
+    .skill-tag { display: inline-block; background: #EBF8FF; color: #3182CE; padding: 3px 10px; border-radius: 15px; margin: 2px; font-size: 11px; }
+    .footer { margin-top: 30px; padding-top: 15px; border-top: 1px solid #E2E8F0; font-size: 10px; color: #A0AEC0; text-align: center; }
+    .ats-tag { display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 8px 16px; border-radius: 20px; font-size: 11px; font-weight: bold; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="name">${name}</div>
+      <div class="title">${title}</div>
+      <div class="contact">
+        ${email ? `<span>✉ ${email}</span>` : ''}
+        ${phone ? `<span>📞 ${phone}</span>` : ''}
+        ${location ? `<span>📍 ${location}</span>` : ''}
+        ${linkedin ? `<span>🔗 ${linkedin}</span>` : ''}
+      </div>
+    </div>
+
+    ${summary ? `
+    <div class="section">
+      <div class="section-title">Professional Summary</div>
+      <div class="summary">${summary}</div>
+    </div>
+    ` : ''}
+
+    ${experience && experience.length > 0 ? `
+    <div class="section">
+      <div class="section-title">Work Experience</div>
+      ${experience.map((exp: any) => `
+        <div class="experience-item">
+          <div class="exp-header">
+            <div>
+              <span class="company">${exp.company}</span>
+              ${exp.position ? `<span class="position"> - ${exp.position}</span>` : ''}
+            </div>
+            <div class="dates">${exp.startDate} - ${exp.endDate}</div>
+          </div>
+          ${exp.description ? `<div class="description">${exp.description}</div>` : ''}
+        </div>
+      `).join('')}
+    </div>
+    ` : ''}
+
+    ${education && education.length > 0 ? `
+    <div class="section">
+      <div class="section-title">Education</div>
+      ${education.map((edu: any) => `
+        <div class="education-item">
+          <div class="exp-header">
+            <div>
+              <span class="company">${edu.school}</span>
+              ${edu.degree ? `<span class="position"> - ${edu.degree}</span>` : ''}
+            </div>
+            <div class="dates">${edu.year}</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+    ` : ''}
+
+    ${skills ? `
+    <div class="section">
+      <div class="section-title">Skills</div>
+      <div class="skills">
+        ${skills.split(',').map((skill: string) => `<span class="skill-tag">${skill.trim()}</span>`).join('')}
+      </div>
+    </div>
+    ` : ''}
+
+    <div class="footer">
+      Generated on ${generatedDate} | Created with Student Co-Op
+      <div class="ats-tag">🎯 ATS Friendly CV - Feature Coming Soon!</div>
+    </div>
+  </div>
+</body>
+</html>
+  `.trim();
+}
 
 /**
  * POST /api/chat/analyze
@@ -491,21 +1095,107 @@ function generateLocalFeedback(text: string, context?: string): string {
   const hasAction = /action|took|decided|implemented|created/i.test(text);
   const hasResult = /result|outcome|achieved|learned|impact/i.test(text);
 
+  // Detect what kind of question/user is responding to
+  const isWeakness = /weakness|weak|struggle|difficult|hard|improve/i.test(text);
+  const isStrength = /strength|good|great|excellent|best|strong/i.test(text);
+  const isConflict = /conflict|disagree|argue|problem|issue|dispute/i.test(text);
+  const isLeadership = /lead|leadership|lead|managed|team|supervis/i.test(text);
+  const isFailure = /fail|failure|mistake|wrong|error/i.test(text);
+  const isGoal = /goal|objective|future|dream|aspiration/i.test(text);
+  const isTeamwork = /team|collaborat|group| collegues/i.test(text);
+  const isMotivation = /why|reason|passion|interested|motivat/i.test(text);
+
   let feedback = '';
   const improvements: string[] = [];
+  let topic = '';
 
-  if (hasSituation && hasTask && hasAction && hasResult) {
+  // Determine the topic and provide targeted feedback
+  if (isWeakness) {
+    topic = 'weakness';
+    feedback = '💡 Good self-awareness! For weaknesses, consider:';
+    if (!/working on|trying to|improve|address/i.test(text)) {
+      improvements.push('• Mention steps you\'re taking to improve');
+    }
+    if (!/learn|develop|grow/i.test(text)) {
+      improvements.push('• Show a growth mindset - how this helps you grow');
+    }
+  } else if (isStrength) {
+    topic = 'strength';
+    feedback = '✨ Great! To strengthen this answer:';
+    if (!/example|situation|when/i.test(text)) {
+      improvements.push('• Add a specific example to demonstrate this');
+    }
+    if (!/value|benefit|contribution/i.test(text)) {
+      improvements.push('• Explain how this benefits your team or role');
+    }
+  } else if (isConflict) {
+    topic = 'conflict';
+    feedback = '🤝 Good topic! For conflict scenarios:';
+    if (!/resolved|solution|handle/i.test(text)) {
+      improvements.push('• Focus on how you resolved or handled the situation');
+    }
+    if (!/communication|listen|understand/i.test(text)) {
+      improvements.push('• Emphasize communication and listening skills');
+    }
+  } else if (isLeadership) {
+    topic = 'leadership';
+    feedback = '👔 Great leadership example! To make it stronger:';
+    if (!/decision|choice/i.test(text)) {
+      improvements.push('• Highlight any decisions you made');
+    }
+    if (!/impact|result/i.test(text)) {
+      improvements.push('• Include the outcome and impact');
+    }
+  } else if (isFailure) {
+    topic = 'failure';
+    feedback = '📚 Good reflection! For failure examples:';
+    if (!/learn|lesson| takeaway/i.test(text)) {
+      improvements.push('• Always include what you learned');
+    }
+    if (!/improve|change|adjust/i.test(text)) {
+      improvements.push('• Show how you used this to improve');
+    }
+  } else if (isGoal) {
+    topic = 'goals';
+    feedback = '🎯 Good vision! To strengthen your goal answer:';
+    if (!/short|long.?term|step/i.test(text)) {
+      improvements.push('• Break it down into short and long-term goals');
+    }
+    if (!/action|plan|achieve/i.test(text)) {
+      improvements.push('• Include specific actions you\'re taking');
+    }
+  } else if (isTeamwork) {
+    topic = 'teamwork';
+    feedback = '🤝 Great teamwork example! To enhance it:';
+    if (!/your|you/i.test(text)) {
+      improvements.push('• Focus on YOUR specific contributions');
+    }
+    if (!/collaborat|contribute|support/i.test(text)) {
+      improvements.push('• Highlight how you supported the team');
+    }
+  } else if (isMotivation) {
+    topic = 'motivation';
+    feedback = '💪 Good reason! To make it more compelling:';
+    if (!/specific|particular/i.test(text)) {
+      improvements.push('• Be specific about what attracts you to this role/company');
+    }
+    if (!/research|learned|discovered/i.test(text)) {
+      improvements.push('• Show you\'ve done your research');
+    }
+  } else if (hasSituation && hasTask && hasAction && hasResult) {
+    // Complete STAR response
     feedback = '🌟 Excellent! You used the STAR method perfectly.';
   } else {
-    feedback = '📝 Good response! Structure with STAR:';
+    // Generic response - check for STAR elements
+    feedback = '📝 Good start! To improve your response:';
     if (!hasSituation) improvements.push('• Situation: Set the context');
     if (!hasTask) improvements.push('• Task: Describe your responsibility');
     if (!hasAction) improvements.push('• Action: Explain what YOU did');
     if (!hasResult) improvements.push('• Result: Share the outcome');
   }
 
-  if (text.length < 50) improvements.push('• Add more detail');
-  if (text.length > 500) improvements.push('• Be more concise');
+  if (text.length < 30) improvements.push('• Add more detail - share specifics');
+  if (text.length > 600) improvements.push('• Consider being more concise');
 
   return feedback + (improvements.length > 0 ? '\n\n' + improvements.join('\n') : '');
 }

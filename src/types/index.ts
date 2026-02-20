@@ -14,6 +14,7 @@ export interface User {
   experienceLevel: 'Beginner' | 'Intermediate' | 'Advanced';
   availability: string;
   lockedUntil?: Date;
+  onboardingCompleted: boolean;
 }
 
 // Job types
@@ -28,6 +29,40 @@ export interface Job {
   posted: string;
   tags: string[];
   url?: string;
+}
+
+// Job Application Diary - tracks when user clicks "Applied"
+export interface JobApplication {
+  id: string;
+  jobId: string;
+  jobTitle: string;
+  company: string;
+  appliedAt: string;
+  status: 'applied' | 'interviewing' | 'offer' | 'rejected' | 'withdrawn';
+  notes: string;
+  followUpDate?: string;
+}
+
+// Bookmarked/Saved Jobs
+export interface BookmarkedJob {
+  id: string;
+  jobId: string;
+  job: Job;
+  bookmarkedAt: string;
+  notes?: string;
+}
+
+// Onboarding Questions for new users
+export interface OnboardingData {
+  careerGoals: string;
+  targetIndustry: string;
+  targetRoles: string[];
+  experienceLevel: 'student' | 'graduate' | 'experienced';
+  skills: string[];
+  locationPreference: string;
+  workType: 'remote' | 'hybrid' | 'onsite';
+  readyToApply: boolean;
+  lookingFor: string[];
 }
 
 // Fellow types

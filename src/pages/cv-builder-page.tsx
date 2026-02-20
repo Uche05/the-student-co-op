@@ -1,11 +1,62 @@
 import { Download, Eye, FileText, Plus, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { MobileBottomNav } from "../components/mobile-bottom-nav";
 import { TopNavigation } from "../components/top-navigation";
 import { Button } from "../components/ui/button";
+import { useApp } from "../context/AppContext";
 import { useCV } from "../hooks";
 
 export function CVBuilderPage() {
   const { cv, updateCV, addExperience, updateExperience, deleteExperience, addEducation, updateEducation, deleteEducation, addSkill, removeSkill } = useCV();
+  const { state } = useApp();
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleDownload = async () => {
+    setIsGenerating(true);
+    try {
+      const response = await fetch('/api/cv/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...cv,
+          userId: state.user?.id || 'default'
+        })
+      });
+
+      if (response.ok) {
+        const contentType = response.headers.get('content-type') || '';
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+
+        if (contentType.includes('text/html')) {
+          // Open HTML in new tab for browser print-to-PDF
+          const newTab = window.open(url, '_blank');
+          if (newTab) {
+            newTab.onload = () => {
+              setTimeout(() => newTab.print(), 500);
+            };
+          }
+        } else {
+          // Direct PDF download
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `CV-${cv.personalInfo.name || 'Student'}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }
+        window.URL.revokeObjectURL(url);
+      } else {
+        console.error('Failed to generate CV');
+        alert('Failed to generate CV. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error generating CV:', error);
+      alert('Error generating CV. Please try again.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const handleAddExperience = () => {
     addExperience({
@@ -54,9 +105,13 @@ export function CVBuilderPage() {
               <Eye className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Preview</span>
             </Button>
-            <Button className="rounded-full bg-[#3182CE] hover:bg-[#2C5AA0] text-white">
+            <Button 
+              className="rounded-full bg-[#3182CE] hover:bg-[#2C5AA0] text-white"
+              onClick={handleDownload}
+              disabled={isGenerating}
+            >
               <Download className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">Download PDF</span>
+              <span className="hidden sm:inline">{isGenerating ? "Generating..." : "Download PDF"}</span>
             </Button>
           </div>
         </div>

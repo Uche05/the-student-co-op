@@ -1,9 +1,35 @@
 import { Brain, History, Mic, Send } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { MobileBottomNav } from "../components/mobile-bottom-nav";
 import { TopNavigation } from "../components/top-navigation";
+import { TTSButton } from "../components/tts-button";
 import { Button } from "../components/ui/button";
 import { useChat, useUser } from "../hooks";
+
+// Speech recognition type
+interface SpeechRecognitionResult {
+  isFinal: boolean;
+  0: { transcript: string };
+}
+
+export interface SpeechRecognitionInstance {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onstart: (() => void) | null;
+  onresult: ((event: { results: SpeechRecognitionResult[] }) => void) | null;
+  onerror: ((event: { error: string }) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+}
+
+declare global {
+  interface Window {
+    SpeechRecognition: new () => SpeechRecognitionInstance;
+    webkitSpeechRecognition: new () => SpeechRecognitionInstance;
+  }
+}
 
 export function CommBuilderPage() {
   const { messages, sendMessage } = useChat();
@@ -11,6 +37,7 @@ export function CommBuilderPage() {
   const [inputMessage, setInputMessage] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [aiStatus, setAiStatus] = useState<"idle" | "listening" | "thinking">("idle");
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
 
   const aiMemory = [
     { label: "Career Path", value: user.careerPath },
@@ -28,15 +55,52 @@ export function CommBuilderPage() {
   };
 
   const handleMicClick = () => {
-    setIsListening(!isListening);
-    setAiStatus(isListening ? "idle" : "listening");
+    // Check if SpeechRecognition is supported
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    
+    if (!SpeechRecognition) {
+      alert("Speech recognition is not supported in your browser. Please use Chrome or Edge.");
+      return;
+    }
 
-    if (!isListening) {
-      setTimeout(() => {
-        setInputMessage("I led a team project where we had to deliver a complex feature in two weeks...");
+    if (isListening) {
+      // Stop listening
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      setAiStatus("idle");
+    } else {
+      // Start listening
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = "en-US";
+
+      recognition.onstart = () => {
+        setIsListening(true);
+        setAiStatus("listening");
+      };
+
+      recognition.onresult = (event) => {
+        const transcript = Array.from(event.results)
+          .map((result) => result[0].transcript)
+          .join("");
+        
+        setInputMessage(transcript);
+      };
+
+      recognition.onerror = (event) => {
+        console.error("Speech recognition error:", event.error);
         setIsListening(false);
         setAiStatus("idle");
-      }, 2000);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+        setAiStatus("idle");
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
     }
   };
 

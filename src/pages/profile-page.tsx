@@ -1,6 +1,8 @@
 import { Briefcase, Edit, Eye, EyeOff, GraduationCap, MapPin } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { api } from '../api/client';
+import { MobileBottomNav } from '../components/mobile-bottom-nav';
+import { TopNavigation } from '../components/top-navigation';
 import { Avatar, AvatarFallback } from '../components/ui/avatar';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -97,8 +99,10 @@ export function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gray-50">
+      <TopNavigation />
+      <div className="p-4 md:p-8">
+        <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">My Profile</h1>
@@ -369,6 +373,8 @@ export function ProfilePage() {
           </div>
         )}
       </div>
+      </div>
+      <MobileBottomNav />
     </div>
   );
 }

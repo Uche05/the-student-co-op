@@ -5,6 +5,7 @@ import { CommBuilderPage } from "./pages/comm-builder-page";
 import { CVBuilderPage } from "./pages/cv-builder-page";
 import { DashboardPage } from "./pages/dashboard-page";
 import { HomePage } from "./pages/home-page";
+import { OnboardingPage } from "./pages/onboarding-page";
 import { ProfilePage } from "./pages/profile-page";
 import { SettingsPage } from "./pages/settings-page";
 
@@ -12,6 +13,10 @@ export const router = createBrowserRouter([
   {
     path: "/",
     Component: HomePage,
+  },
+  {
+    path: "/onboarding",
+    Component: OnboardingPage,
   },
   {
     path: "/login",
