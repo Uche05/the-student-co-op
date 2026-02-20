@@ -136,13 +136,21 @@ export function CommBuilderPage() {
                     }`}
                   >
                     <p className="whitespace-pre-wrap">{message.content}</p>
-                    <p
-                      className={`text-xs mt-2 ${
-                        message.type === "user" ? "text-white/70" : "text-[#64748B]"
-                      }`}
-                    >
-                      {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                    </p>
+                    <div className="flex items-center justify-between mt-2">
+                      <p
+                        className={`text-xs ${
+                          message.type === "user" ? "text-white/70" : "text-[#64748B]"
+                        }`}
+                      >
+                        {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                      {message.type === "ai" && (
+                        <TTSButton 
+                          text={message.content} 
+                          className="p-1 hover:bg-gray-100 rounded"
+                        />
+                      )}
+                    </div>
                   </div>
 
                   {message.type === "user" && (

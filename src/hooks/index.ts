@@ -1,6 +1,21 @@
 import { useCallback, useState } from 'react';
+import { api } from '../api/client';
 import { useApp } from '../context/AppContext';
-import type { CVData, Fellow, Job, Message } from '../types';
+import type { CVData, Job, Message } from '../types';
+
+// Helper to format dates
+function formatPostedDate(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffTime = Math.abs(now.getTime() - date.getTime());
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+  return `${Math.floor(diffDays / 30)} months ago`;
+}
 
 // Hook for user data
 export function useUser() {
@@ -58,6 +73,27 @@ export function useCV() {
     updateCV({ skills: state.cv.skills.filter((s) => s !== skill) });
   }, [state.cv.skills, updateCV]);
 
+  // Generate PDF using Foxit
+  const generatePDF = useCallback(async () => {
+    try {
+      const response = await api.cv.generate(state.cv);
+      // Handle the PDF response - download it
+      if (response.data?.pdfBuffer) {
+        const blob = new Blob([response.data.pdfBuffer], { type: 'application/pdf' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `CV-${state.cv.personalInfo.name || 'Student'}.pdf`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      }
+      return response.data;
+    } catch (error) {
+      console.error('Failed to generate PDF:', error);
+      throw error;
+    }
+  }, [state.cv]);
+
   return {
     cv: state.cv,
     updateCV,
@@ -69,6 +105,7 @@ export function useCV() {
     deleteEducation,
     addSkill,
     removeSkill,
+    generatePDF,
   };
 }
 
@@ -80,11 +117,28 @@ export function useJobs() {
   const fetchJobs = useCallback(async () => {
     setIsLoading(true);
     try {
-      // TODO: Replace with actual API call when backend is ready
-      // const response = await api.jobs.list();
-      // dispatch({ type: 'SET_JOBS', payload: response.data });
+      // Call backend API - You.com for live jobs
+      const response = await api.jobs.list();
       
-      // For now, set mock data
+      // Map backend response to frontend format
+      const backendJobs = (response.data as any).data || [];
+      const jobs: Job[] = backendJobs.map((job: any) => ({
+        id: job.id,
+        company: job.company,
+        logo: job.company?.charAt(0).toUpperCase() || 'J',
+        position: job.title || job.position,
+        location: job.location || 'Remote',
+        type: 'Full-time',
+        salary: job.salary || 'Competitive',
+        posted: job.postedDate ? formatPostedDate(job.postedDate) : 'Recently',
+        tags: job.description ? job.description.split(' ').slice(0, 3) : [],
+        url: job.url || '',
+      }));
+      
+      dispatch({ type: 'SET_JOBS', payload: jobs });
+    } catch (error) {
+      console.error('Failed to fetch jobs:', error);
+      // Fallback to mock data on error
       const mockJobs: Job[] = [
         { id: '1', company: 'Google', logo: 'G', position: 'Software Engineering Intern', location: 'Mountain View, CA', type: 'Internship', salary: '$8,000/month', posted: '2 days ago', tags: ['Python', 'Machine Learning', 'Backend'] },
         { id: '2', company: 'Microsoft', logo: 'M', position: 'Product Manager Intern', location: 'Seattle, WA', type: 'Internship', salary: '$7,500/month', posted: '4 days ago', tags: ['Product', 'Strategy', 'Analytics'] },
@@ -92,8 +146,6 @@ export function useJobs() {
         { id: '4', company: 'Meta', logo: 'F', position: 'Frontend Engineer Intern', location: 'Menlo Park, CA', type: 'Internship', salary: '$8,500/month', posted: '3 days ago', tags: ['React', 'TypeScript', 'UI/UX'] },
       ];
       dispatch({ type: 'SET_JOBS', payload: mockJobs });
-    } catch (error) {
-      console.error('Failed to fetch jobs:', error);
     } finally {
       setIsLoading(false);
     }
@@ -110,16 +162,9 @@ export function useFellows() {
   const fetchFellows = useCallback(async () => {
     setIsLoading(true);
     try {
-      // TODO: Replace with actual API call when backend is ready
-      const mockFellows: Fellow[] = [
-        { id: '1', name: 'Sarah Chen', role: 'CS @ MIT', school: 'MIT', image: 'SC', connected: false },
-        { id: '2', name: 'Alex Kumar', role: 'Business @ NYU', school: 'NYU', image: 'AK', connected: true },
-        { id: '3', name: 'Jordan Lee', role: 'Design @ RISD', school: 'RISD', image: 'JL', connected: false },
-        { id: '4', name: 'Emily Rodriguez', role: 'Engineering @ Stanford', school: 'Stanford', image: 'ER', connected: true },
-        { id: '5', name: 'Michael Park', role: 'CS @ Berkeley', school: 'UC Berkeley', image: 'MP', connected: false },
-        { id: '6', name: 'Aisha Patel', role: 'Product @ CMU', school: 'CMU', image: 'AP', connected: true },
-      ];
-      dispatch({ type: 'SET_FELLOWS', payload: mockFellows });
+      const response = await api.fellows.list();
+      const fellowsData = response.data as any;
+      dispatch({ type: 'SET_FELLOWS', payload: fellowsData.fellows || [] });
     } catch (error) {
       console.error('Failed to fetch fellows:', error);
     } finally {
@@ -153,19 +198,17 @@ export function useChat() {
     addMessage(userMessage);
 
     try {
-      // TODO: Replace with actual API call when backend is ready
-      // const response = await api.chat.send(content);
+      const response = await api.chat.send(content, 'Interview');
+      const responseData = response.data as any;
+      const feedback = responseData?.analysis?.feedback;
       
-      // Mock AI response for now
-      setTimeout(() => {
-        const aiResponse: Message = {
-          id: (Date.now() + 1).toString(),
-          type: 'ai',
-          content: "That's a great question! Let me provide some feedback on your response structure. You started well by providing context, but remember to use the STAR method: Situation, Task, Action, Result.",
-          timestamp: new Date(),
-        };
-        addMessage(aiResponse);
-      }, 1500);
+      const aiResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'ai',
+        content: feedback || responseData?.message || "I'm sorry, I couldn't generate feedback at this time. Please try again.",
+        timestamp: new Date(),
+      };
+      addMessage(aiResponse);
     } catch (error) {
       console.error('Failed to send message:', error);
     }
@@ -184,11 +227,9 @@ export function useRadarData() {
 
   const fetchRadarData = useCallback(async () => {
     try {
-      // TODO: Replace with actual API call when backend is ready
-      // const response = await api.awarenessTest.getResults();
-      // dispatch({ type: 'SET_RADAR_DATA', payload: response.data });
-      
-      // Mock data is already set in initial state
+      const response = await api.awarenessTest.getResults();
+      const resultsData = response.data as any;
+      dispatch({ type: 'SET_RADAR_DATA', payload: resultsData.results });
     } catch (error) {
       console.error('Failed to fetch radar data:', error);
     }

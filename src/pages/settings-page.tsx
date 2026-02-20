@@ -2,6 +2,7 @@ import { Award, Bell, Calendar, Info, Lock, Target, User } from "lucide-react";
 import { useState } from "react";
 import { MobileBottomNav } from "../components/mobile-bottom-nav";
 import { TopNavigation } from "../components/top-navigation";
+import { TTSButton } from "../components/tts-button";
 import { Button } from "../components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/ui/tooltip";
 import { useNotifications, useUser } from "../hooks";
@@ -185,6 +186,45 @@ export function SettingsPage() {
                     Cancel
                   </Button>
                 </div>
+              </div>
+            </section>
+
+            {/* Accessibility - Text to Speech */}
+            <section className="bg-white rounded-2xl p-6 lg:p-8 border border-[#E2E8F0]">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-[#38A169]/10 rounded-2xl flex items-center justify-center">
+                  <span className="text-2xl">🔊</span>
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-[#1A202C]">Accessibility</h2>
+                  <p className="text-sm text-[#64748B]">Text-to-speech and reading assistance</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-start gap-4 p-4 bg-[#F9FAFB] rounded-xl border border-[#E2E8F0]">
+                  <div className="mt-1">
+                    <span className="text-xl">🔊</span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-medium text-[#1A202C] mb-1">Text-to-Speech</h3>
+                    <p className="text-sm text-[#64748B] mb-3">
+                      Use the built-in speech synthesis to read content aloud. Click the speaker icon on any text to hear it read.
+                    </p>
+                    <div className="flex items-center gap-3">
+                      <TTSButton 
+                        text="Welcome to Student Co-op! This is a demo of the text-to-speech feature. Your career path is locked to help you stay focused on your goals." 
+                        className="bg-[#38A169] hover:bg-[#2F855A] text-white px-4 py-2 rounded-lg"
+                      />
+                      <span className="text-sm text-[#64748B]">Click to test</span>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-xs text-[#64748B]">
+                  Uses the browser's built-in Web Speech API. No internet connection or API keys required. 
+                  Works in Chrome, Edge, Safari, and Firefox.
+                </p>
               </div>
             </section>
 

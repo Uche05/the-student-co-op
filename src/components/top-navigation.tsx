@@ -1,5 +1,6 @@
-import { Briefcase, FileText, Home, Menu, Settings, Users } from "lucide-react";
-import { Link, useLocation } from "react-router";
+import { Briefcase, FileText, Home, LogOut, Menu, Settings, Users } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router";
+import { useApp } from "../context/AppContext";
 import { Button } from "./ui/button";
 
 interface TopNavigationProps {
@@ -8,14 +9,22 @@ interface TopNavigationProps {
 
 export function TopNavigation({ onMenuClick }: TopNavigationProps) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { state, signOut } = useApp();
+  const { isAuthenticated, currentUser } = state;
   
   const navItems = [
     { path: "/", label: "Home", icon: Home },
     { path: "/dashboard", label: "Dashboard", icon: Briefcase },
     { path: "/comm-builder", label: "Coach", icon: Users },
     { path: "/cv-builder", label: "CV", icon: FileText },
-    { path: "/settings", label: "Settings", icon: Settings },
+    { path: "/profile", label: "Profile", icon: Settings },
   ];
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/login');
+  };
 
   return (
     <nav className="bg-[#1A202C] text-white shadow-lg sticky top-0 z-50">
@@ -61,19 +70,44 @@ export function TopNavigation({ onMenuClick }: TopNavigationProps) {
             })}
           </div>
 
-          {/* User Profile */}
+          {/* User Profile / Auth Buttons */}
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="rounded-full bg-white/10 text-white hover:bg-white/20 hidden sm:flex"
-            >
-              <Users className="w-4 h-4 mr-2" />
-              Profile
-            </Button>
-            <div className="w-9 h-9 rounded-full bg-[#3182CE] flex items-center justify-center text-sm font-semibold">
-              JD
-            </div>
+            {isAuthenticated && currentUser ? (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleSignOut}
+                  className="rounded-full bg-white/10 text-white hover:bg-white/20 hidden sm:flex"
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign Out
+                </Button>
+                <div className="w-9 h-9 rounded-full bg-[#3182CE] flex items-center justify-center text-sm font-semibold">
+                  {currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                </div>
+              </>
+            ) : (
+              <>
+                <Link to="/login">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="rounded-full text-white hover:bg-white/10 hidden sm:flex"
+                  >
+                    Sign In
+                  </Button>
+                </Link>
+                <Link to="/signup">
+                  <Button
+                    size="sm"
+                    className="rounded-full bg-[#3182CE] text-white hover:bg-[#2C5AA0]"
+                  >
+                    Sign Up
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>

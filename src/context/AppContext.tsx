@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { createContext, useContext, useReducer } from 'react';
+import { api } from '../api/client';
 import type { CVData, Fellow, Job, Message, NotificationSetting, RadarData, User } from '../types';
 
 // Default mock data - can be replaced with API calls
@@ -89,6 +90,8 @@ interface AppState {
   radarData: RadarData[];
   isLoading: boolean;
   error: string | null;
+  isAuthenticated: boolean;
+  currentUser: { userId: string; name: string; email: string } | null;
 }
 
 // Action types
@@ -103,7 +106,8 @@ type AppAction =
   | { type: 'TOGGLE_NOTIFICATION'; payload: string }
   | { type: 'SET_RADAR_DATA'; payload: RadarData[] }
   | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_ERROR'; payload: string | null };
+  | { type: 'SET_ERROR'; payload: string | null }
+  | { type: 'SET_AUTH'; payload: { isAuthenticated: boolean; currentUser: { userId: string; name: string; email: string } | null } }
 
 // Initial state
 const initialState: AppState = {
@@ -116,6 +120,8 @@ const initialState: AppState = {
   radarData: defaultRadarData,
   isLoading: false,
   error: null,
+  isAuthenticated: false,
+  currentUser: null,
 };
 
 // Reducer
@@ -148,6 +154,8 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, isLoading: action.payload };
     case 'SET_ERROR':
       return { ...state, error: action.payload };
+    case 'SET_AUTH':
+      return { ...state, isAuthenticated: action.payload.isAuthenticated, currentUser: action.payload.currentUser };
     default:
       return state;
   }
@@ -162,6 +170,9 @@ interface AppContextType {
   updateCV: (cv: Partial<CVData>) => void;
   addMessage: (message: Message) => void;
   toggleNotification: (id: string) => void;
+  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signUp: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string }>;
+  signOut: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -187,6 +198,48 @@ export function AppProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'TOGGLE_NOTIFICATION', payload: id });
   };
 
+  const signIn = async (email: string, password: string) => {
+    try {
+      const response = await api.auth.signin(email, password);
+      if (response.success) {
+        dispatch({ 
+          type: 'SET_AUTH', 
+          payload: { 
+            isAuthenticated: true, 
+            currentUser: { userId: response.data.userId, name: response.data.name, email: response.data.email } 
+          } 
+        });
+        return { success: true };
+      }
+      return { success: false, error: 'Invalid credentials' };
+    } catch (error) {
+      return { success: false, error: 'Sign in failed' };
+    }
+  };
+
+  const signUp = async (email: string, password: string, name: string) => {
+    try {
+      const response = await api.auth.signup(email, password, name);
+      if (response.success) {
+        dispatch({ 
+          type: 'SET_AUTH', 
+          payload: { 
+            isAuthenticated: true, 
+            currentUser: { userId: response.data.userId, name: response.data.name, email: response.data.email } 
+          } 
+        });
+        return { success: true };
+      }
+      return { success: false, error: response.data?.error || 'Signup failed' };
+    } catch (error) {
+      return { success: false, error: 'Sign up failed' };
+    }
+  };
+
+  const signOut = async () => {
+    dispatch({ type: 'SET_AUTH', payload: { isAuthenticated: false, currentUser: null } });
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -196,6 +249,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         updateCV,
         addMessage,
         toggleNotification,
+        signIn,
+        signUp,
+        signOut,
       }}
     >
       {children}

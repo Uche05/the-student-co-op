@@ -44,6 +44,15 @@ async function fetchApi<T>(
 // API methods - replace mock calls with these when backend is ready
 
 export const api = {
+  // Auth endpoints
+  auth: {
+    signup: (email: string, password: string, name: string) => 
+      fetchApi('/auth/signup', { method: 'POST', body: JSON.stringify({ email, password, name }) }),
+    signin: (email: string, password: string) => 
+      fetchApi('/auth/signin', { method: 'POST', body: JSON.stringify({ email, password }) }),
+    signout: () => fetchApi('/auth/signout', { method: 'POST' }),
+  },
+
   // User endpoints
   user: {
     get: () => fetchApi('/user'),
@@ -66,6 +75,7 @@ export const api = {
   cv: {
     get: () => fetchApi('/cv'),
     save: (data: unknown) => fetchApi('/cv', { method: 'PUT', body: JSON.stringify(data) }),
+    generate: (data: unknown) => fetchApi('/cv/generate', { method: 'POST', body: JSON.stringify(data) }),
   },
 
   // Awareness Test endpoints
@@ -78,8 +88,10 @@ export const api = {
 
   // Chat endpoints
   chat: {
-    send: (message: string) => 
-      fetchApi('/chat', { method: 'POST', body: JSON.stringify({ message }) }),
+    send: (message: string, context?: string) => 
+      fetchApi('/chat/analyze', { method: 'POST', body: JSON.stringify({ text: message, context }) }),
+    analyze: (data: { text?: string; audioUrl?: string }) =>
+      fetchApi('/chat/analyze', { method: 'POST', body: JSON.stringify(data) }),
   },
 
   // Settings endpoints

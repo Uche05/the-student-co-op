@@ -94,9 +94,15 @@ export function DashboardPage() {
                               {job.company}
                             </p>
                           </div>
-                          <Button className="rounded-full bg-[#3182CE] hover:bg-[#2C5AA0] text-white hidden sm:flex">
-                            Apply Now
-                          </Button>
+                          <Button 
+                          className="rounded-full bg-[#3182CE] hover:bg-[#2C5AA0] text-white hidden sm:flex"
+                          onClick={() => {
+                            const url = job.url || `https://uk.indeed.com/jobs?q=${encodeURIComponent(job.position)}&l=${encodeURIComponent(job.location)}`;
+                            window.open(url, '_blank');
+                          }}
+                        >
+                          Apply Now
+                        </Button>
                         </div>
 
                         <div className="flex flex-wrap gap-4 text-sm text-[#64748B] mb-4">
@@ -126,7 +132,13 @@ export function DashboardPage() {
                           ))}
                         </div>
 
-                        <Button className="rounded-full bg-[#3182CE] hover:bg-[#2C5AA0] text-white w-full mt-4 sm:hidden">
+                        <Button 
+                          className="rounded-full bg-[#3182CE] hover:bg-[#2C5AA0] text-white w-full mt-4 sm:hidden"
+                          onClick={() => {
+                            const url = job.url || `https://uk.indeed.com/jobs?q=${encodeURIComponent(job.position)}&l=${encodeURIComponent(job.location)}`;
+                            window.open(url, '_blank');
+                          }}
+                        >
                           Apply Now
                         </Button>
                       </div>

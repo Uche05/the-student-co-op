@@ -1,15 +1,25 @@
 import { createBrowserRouter } from "react-router";
-import { HomePage } from "./pages/home-page";
-import { CommBuilderPage } from "./pages/comm-builder-page";
-import { DashboardPage } from "./pages/dashboard-page";
-import { SettingsPage } from "./pages/settings-page";
+import { LoginPage, SignupPage } from "./pages/auth-page";
 import { AwarenessTestPage } from "./pages/awareness-test-page";
+import { CommBuilderPage } from "./pages/comm-builder-page";
 import { CVBuilderPage } from "./pages/cv-builder-page";
+import { DashboardPage } from "./pages/dashboard-page";
+import { HomePage } from "./pages/home-page";
+import { ProfilePage } from "./pages/profile-page";
+import { SettingsPage } from "./pages/settings-page";
 
 export const router = createBrowserRouter([
   {
     path: "/",
     Component: HomePage,
+  },
+  {
+    path: "/login",
+    Component: LoginPage,
+  },
+  {
+    path: "/signup",
+    Component: SignupPage,
   },
   {
     path: "/comm-builder",
@@ -30,5 +40,9 @@ export const router = createBrowserRouter([
   {
     path: "/cv-builder",
     Component: CVBuilderPage,
+  },
+  {
+    path: "/profile",
+    Component: ProfilePage,
   },
 ]);

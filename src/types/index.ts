@@ -27,6 +27,7 @@ export interface Job {
   salary: string;
   posted: string;
   tags: string[];
+  url?: string;
 }
 
 // Fellow types
